@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 import torchaudio as ta
+from torchaudio.functional import resample
 from lightning import LightningDataModule
 from torch.utils.data.dataloader import DataLoader
 
@@ -197,8 +198,17 @@ class TextMelDataset(torch.utils.data.Dataset):
         return durs
 
     def get_mel(self, filepath):
-        audio, sr = ta.load(filepath)
-        assert sr == self.sample_rate
+        audio, sr = ta.load(filepath)  # [C, T] 또는 [T]
+        # [T] -> [1, T]
+        if audio.dim() == 1:
+            audio = audio.unsqeeze(0)
+        # downmix to mono
+        if audio.size(0) > 1:
+            audio = audio.mean(dim=0, keepdim=True) # [1, T]
+        # assert sr == self.sample_rate
+        if sr != self.sample_rate:
+            audio = resample(audio, sr, self.sample_rate)
+            sr = self.sample_rate
         mel = mel_spectrogram(
             audio,
             self.n_fft,
@@ -209,7 +219,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_min,
             self.f_max,
             center=False,
-        ).squeeze()
+        ).squeeze() #[n_mels, T]
         mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
         return mel
 
