@@ -21,9 +21,9 @@ from matcha.utils.utils import get_user_data_dir, plot_tensor
 LOCATION = Path(get_user_data_dir())
 
 args = Namespace(
-    cpu=False,
+    cpu=True,
     model="matcha_vctk",
-    vocoder="hifigan_univ_v1",
+    vocoder="hifigan_T2_v1",
     spk=0,
 )
 

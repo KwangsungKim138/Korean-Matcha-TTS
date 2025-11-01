@@ -1,315 +1,186 @@
 <div align="center">
 
-# 🍵 Matcha-TTS: A fast TTS architecture with conditional flow matching
-
-### [Shivam Mehta](https://www.kth.se/profile/smehta), [Ruibo Tu](https://www.kth.se/profile/ruibo), [Jonas Beskow](https://www.kth.se/profile/beskow), [Éva Székely](https://www.kth.se/profile/szekely), and [Gustav Eje Henter](https://people.kth.se/~ghe/)
+# 🍵 Korean-Matcha-TTS: A fast Korean TTS architecture with conditional flow matching
 
 [![python](https://img.shields.io/badge/-Python_3.10-blue?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3100/)
 [![pytorch](https://img.shields.io/badge/PyTorch_2.0+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/get-started/locally/)
-[![lightning](https://img.shields.io/badge/-Lightning_2.0+-792ee5?logo=pytorchlightning&logoColor=white)](https://pytorchlightning.ai/)
-[![hydra](https://img.shields.io/badge/Config-Hydra_1.3-89b8cd)](https://hydra.cc/)
-[![black](https://img.shields.io/badge/Code%20Style-Black-black.svg?labelColor=gray)](https://black.readthedocs.io/en/stable/)
-[![isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/matcha-tts?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/matcha-tts)
-<p style="text-align: center;">
-  <img src="https://shivammehta25.github.io/Matcha-TTS/images/logo.png" height="128"/>
-</p>
 
 </div>
 
-> This is the official code implementation of 🍵 Matcha-TTS [ICASSP 2024].
+> This repository builds upon [Matcha-TTS (ICASSP 2024)](https://arxiv.org/abs/2309.03199),
+> initially trained on the [KSS dataset](https://huggingface.co/datasets/Bingsu/KSS_Dataset), 
+> and designed to support additional Korean speech corpora in the future.
+>  
+> [🍵 Matcha-TTS (ICASSP 2024)](https://arxiv.org/abs/2309.03199)는 [Conditional Flow Matching](https://arxiv.org/abs/2210.02747)을 이용해 만든 
+> 빠르고 자연스러운 **비자기회귀(Non-autoregressive)** 음성 합성 모델입니다.
+> **Korean-Matcha-TTS**는 이를 기반으로 **KSS 한국어 음성 데이터셋**을 학습한 버전입니다.
+---
 
-We propose 🍵 Matcha-TTS, a new approach to non-autoregressive neural TTS, that uses [conditional flow matching](https://arxiv.org/abs/2210.02747) (similar to [rectified flows](https://arxiv.org/abs/2209.03003)) to speed up ODE-based speech synthesis. Our method:
+## 🧠 특징
 
-- Is probabilistic
-- Has compact memory footprint
-- Sounds highly natural
-- Is very fast to synthesise from
+- 확률적·비자기회귀적 구조  
+- 메모리 효율적
+- 자연스러운 음질  
+- ODE 기반의 빠른 합성  
+- 한국어 KSS 데이터셋 대응
 
-Check out our [demo page](https://shivammehta25.github.io/Matcha-TTS) and read [our ICASSP 2024 paper](https://arxiv.org/abs/2309.03199) for more details.
+---
 
-[Pre-trained models](https://drive.google.com/drive/folders/17C_gYgEHOxI5ZypcfE_k1piKCtyR0isJ?usp=sharing) will be automatically downloaded with the CLI or gradio interface.
+## ⚙️ 환경
+ 
+- **Python:** 3.10  
+- **PyTorch:** ≥ 2.0  
 
-You can also [try 🍵 Matcha-TTS in your browser on HuggingFace 🤗 spaces](https://huggingface.co/spaces/shivammehta25/Matcha-TTS).
+---
 
-## Teaser video
+## 1️⃣ 설치
 
-[![Watch the video](https://img.youtube.com/vi/xmvJkz3bqw0/hqdefault.jpg)](https://youtu.be/xmvJkz3bqw0)
-
-## Installation
-
-1. Create an environment (suggested but optional)
-
-```
-conda create -n matcha-tts python=3.10 -y
-conda activate matcha-tts
-```
-
-2. Install Matcha TTS using pip or from source
-
-```bash
-pip install matcha-tts
-```
-
-from source
+### A. Python / PyTorch
 
 ```bash
-pip install git+https://github.com/shivammehta25/Matcha-TTS.git
-cd Matcha-TTS
+conda create -n korean-matcha-tts python=3.10 -y
+conda activate korean-matcha-tts
+
+# Install PyTorch CUDA 12.1 build
+pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision torchaudio
+```
+
+### B. Clone Repository
+
+```bash
+git clone https://github.com/KwangsungKim138/Korean-Matcha-TTS.git
+cd Korean-Matcha-TTS
 pip install -e .
 ```
 
-3. Run CLI / gradio app / jupyter notebook
+### C. Download & Unzip KSS Dataset
 
-```bash
-# This will download the required models
-matcha-tts --text "<INPUT TEXT>"
+[KSS 데이터셋](https://huggingface.co/datasets/Bingsu/KSS_Dataset)을 다운로드한 뒤 data/kss 경로에서 압축을 해제합니다.
+
+```
+data/kss/
+├─ 1/
+│  ├─ 1_0000.wav
+│  └─ ...
+├─ 2/
+├─ 3/
+├─ 4/
+└─ transcript.v.1.4.txt
 ```
 
-or
+### D. Make KSS Filelists
+
+Matcha-TTS는 **Tacotron 2 스타일**(`path|text`) 파일리스트를 사용합니다.
 
 ```bash
-matcha-tts-app
+python scripts/make_kss_filelists.py
+# → data/filelists/kss_train.txt, kss_val.txt
 ```
 
-or open `synthesis.ipynb` on jupyter notebook
-
-### CLI Arguments
-
-- To synthesise from given text, run:
-
-```bash
-matcha-tts --text "<INPUT TEXT>"
-```
-
-- To synthesise from a file, run:
-
-```bash
-matcha-tts --file <PATH TO FILE>
-```
-
-- To batch synthesise from a file, run:
-
-```bash
-matcha-tts --file <PATH TO FILE> --batched
-```
-
-Additional arguments
-
-- Speaking rate
-
-```bash
-matcha-tts --text "<INPUT TEXT>" --speaking_rate 1.0
-```
-
-- Sampling temperature
-
-```bash
-matcha-tts --text "<INPUT TEXT>" --temperature 0.667
-```
-
-- Euler ODE solver steps
-
-```bash
-matcha-tts --text "<INPUT TEXT>" --steps 10
-```
-
-## Train with your own dataset
-
-Let's assume we are training with LJ Speech
-
-1. Download the dataset from [here](https://keithito.com/LJ-Speech-Dataset/), extract it to `data/LJSpeech-1.1`, and prepare the file lists to point to the extracted data like for [item 5 in the setup of the NVIDIA Tacotron 2 repo](https://github.com/NVIDIA/tacotron2#setup).
-
-2. Clone and enter the Matcha-TTS repository
-
-```bash
-git clone https://github.com/shivammehta25/Matcha-TTS.git
-cd Matcha-TTS
-```
-
-3. Install the package from source
-
-```bash
-pip install -e .
-```
-
-4. Go to `configs/data/ljspeech.yaml` and change
+`configs/data/kss.yaml`에 기재된 경로를 확인/수정합니다.
 
 ```yaml
-train_filelist_path: data/filelists/ljs_audio_text_train_filelist.txt
-valid_filelist_path: data/filelists/ljs_audio_text_val_filelist.txt
+train_filelist_path: data/filelists/kss_train.txt
+valid_filelist_path: data/filelists/kss_val.txt
 ```
 
-5. Generate normalisation statistics with the yaml file of dataset configuration
+### E. Install espeak-ng
 
 ```bash
-matcha-data-stats -i ljspeech.yaml
-# Output:
-#{'mel_mean': -5.53662231756592, 'mel_std': 2.1161014277038574}
+sudo apt-get update && sudo apt-get install -y espeak-ng
 ```
 
-Update these values in `configs/data/ljspeech.yaml` under `data_statistics` key.
+### F. Compute Mel Statistics
 
 ```bash
-data_statistics:  # Computed for ljspeech dataset
-  mel_mean: -5.536622
-  mel_std: 2.116101
+matcha-data-stats -i kss.yaml
+# {'mel_mean': -6.562135219573975, 'mel_std': 2.7914016246795654}
 ```
 
-to the paths of your train and validation filelists.
+결괏값을 `configs/data/kss.yaml`의 `data_statistics` 항목에 입력합니다.
 
-6. Run the training script
-
-```bash
-make train-ljspeech
+```yaml
+data_statistics:
+  mel_mean: -6.562135
+  mel_std:  2.791402
 ```
 
-or
-
-```bash
-python matcha/train.py experiment=ljspeech
-```
-
-- for a minimum memory run
-
-```bash
-python matcha/train.py experiment=ljspeech_min_memory
-```
-
-- for multi-gpu training, run
-
-```bash
-python matcha/train.py experiment=ljspeech trainer.devices=[0,1]
-```
-
-7. Synthesise from the custom trained model
-
-```bash
-matcha-tts --text "<INPUT TEXT>" --checkpoint_path <PATH TO CHECKPOINT>
-```
-
-## ONNX support
-
-> Special thanks to [@mush42](https://github.com/mush42) for implementing ONNX export and inference support.
-
-It is possible to export Matcha checkpoints to [ONNX](https://onnx.ai/), and run inference on the exported ONNX graph.
-
-### ONNX export
-
-To export a checkpoint to ONNX, first install ONNX with
-
-```bash
-pip install onnx
-```
-
-then run the following:
-
-```bash
-python3 -m matcha.onnx.export matcha.ckpt model.onnx --n-timesteps 5
-```
-
-Optionally, the ONNX exporter accepts **vocoder-name** and **vocoder-checkpoint** arguments. This enables you to embed the vocoder in the exported graph and generate waveforms in a single run (similar to end-to-end TTS systems).
-
-**Note** that `n_timesteps` is treated as a hyper-parameter rather than a model input. This means you should specify it during export (not during inference). If not specified, `n_timesteps` is set to **5**.
-
-**Important**: for now, torch>=2.1.0 is needed for export since the `scaled_product_attention` operator is not exportable in older versions. Until the final version is released, those who want to export their models must install torch>=2.1.0 manually as a pre-release.
-
-### ONNX Inference
-
-To run inference on the exported model, first install `onnxruntime` using
-
-```bash
-pip install onnxruntime
-pip install onnxruntime-gpu  # for GPU inference
-```
-
-then use the following:
-
-```bash
-python3 -m matcha.onnx.infer model.onnx --text "hey" --output-dir ./outputs
-```
-
-You can also control synthesis parameters:
-
-```bash
-python3 -m matcha.onnx.infer model.onnx --text "hey" --output-dir ./outputs --temperature 0.4 --speaking_rate 0.9 --spk 0
-```
-
-To run inference on **GPU**, make sure to install **onnxruntime-gpu** package, and then pass `--gpu` to the inference command:
-
-```bash
-python3 -m matcha.onnx.infer model.onnx --text "hey" --output-dir ./outputs --gpu
-```
-
-If you exported only Matcha to ONNX, this will write mel-spectrogram as graphs and `numpy` arrays to the output directory.
-If you embedded the vocoder in the exported graph, this will write `.wav` audio files to the output directory.
-
-If you exported only Matcha to ONNX, and you want to run a full TTS pipeline, you can pass a path to a vocoder model in `ONNX` format:
-
-```bash
-python3 -m matcha.onnx.infer model.onnx --text "hey" --output-dir ./outputs --vocoder hifigan.small.onnx
-```
-
-This will write `.wav` audio files to the output directory.
-
-## Extract phoneme alignments from Matcha-TTS
-
-If the dataset is structured as
-
-```bash
-data/
-└── LJSpeech-1.1
-    ├── metadata.csv
-    ├── README
-    ├── test.txt
-    ├── train.txt
-    ├── val.txt
-    └── wavs
-```
-Then you can extract the phoneme level alignments from a Trained Matcha-TTS model using:
-```bash
-python  matcha/utils/get_durations_from_trained_model.py -i dataset_yaml -c <checkpoint>
-```
-Example:
-```bash
-python  matcha/utils/get_durations_from_trained_model.py -i ljspeech.yaml -c matcha_ljspeech.ckpt
-```
-or simply:
-```bash
-matcha-tts-get-durations -i ljspeech.yaml -c matcha_ljspeech.ckpt
-```
 ---
-## Train using extracted alignments
 
-In the datasetconfig turn on load duration.
-Example: `ljspeech.yaml`
+## 2️⃣ 학습
+
+```bash
+make train-kss
 ```
-load_durations: True
+또는
+
+```bash
+python matcha/train.py experiment=kss
 ```
-or see an examples in configs/experiment/ljspeech_from_durations.yaml
 
+- 최소 메모리 모드 (미지원)
+  ```bash
+  python matcha/train.py experiment=kss_min_memory
+  ```
+- 다중 GPU 학습  
+  ```bash
+  python matcha/train.py experiment=kss trainer.devices=[0,1]
+  ```
 
-## Citation information
+---
 
-If you use our code or otherwise find this work useful, please cite our paper:
+## 3️⃣ 추론
+
+Pre-trained **HiFi-GAN**에 의해 멜→오디오 변환이 수행됩니다.
+
+```bash
+matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --checkpoint_path "<PATH_TO_CHECKPOINT>"   --vocoder hifigan_T2_v1   --steps 32   --out wavs/output
+```
+
+`steps`와 `temperature`는 trade-off 관계
+- `--steps`: ODE 스텝 (값이 작을수록 빠르지만 노이즈↑)  
+- `--temperature`: 샘플링 temperature
+
+---
+
+## 4️⃣ 한국어 Matcha-TTS 개발 단계
+
+### 1단계 — 한글(문자 단위) 기반 학습 (2025. 11. 1. ~)
+- 한글/숫자/기본 문장부호만 남겨 텍스트 파일리스트에 기록  
+- **G2P 없이도** 기본적인 음질 확보 가능  
+- 연음·유음·경음화 등 발음규칙은 반영되지 않음
+- 현재 `kss-without-phonemizer` 브랜치에서 관련 코드 개선 작업 중
+
+### 2단계 — G2P 도입 (2025. 11. 2. ~)
+- [g2pk2](https://pypi.org/project/g2pk2) 또는 [g2pkk](https://github.com/g2pkteam/g2pkk) 사용  
+- 발음 규칙 반영(phonetise) 후 `text` 필드에 발음 표기 기록
+
+---
+
+## 5️⃣ ONNX Export
+
+```bash
+pip install onnx onnxruntime-gpu
+python3 -m matcha.onnx.export matcha.ckpt model.onnx --n-timesteps 5
+python3 -m matcha.onnx.infer model.onnx --text "안녕하세요" --gpu
+```
+
+---
+
+## 📄 Citation
 
 ```text
 @inproceedings{mehta2024matcha,
   title={Matcha-{TTS}: A fast {TTS} architecture with conditional flow matching},
-  author={Mehta, Shivam and Tu, Ruibo and Beskow, Jonas and Sz{\'e}kely, {\'E}va and Henter, Gustav Eje},
+  author={Mehta, Shivam and Tu, Ruibo and Beskow, Jonas and Sz{'e}kely, {'E}va and Henter, Gustav Eje},
   booktitle={Proc. ICASSP},
-  year={2024}
+  year={2024},
+  note={This repository builds upon Matcha-TTS (ICASSP 2024) and adapts it for the Korean KSS dataset.}
 }
 ```
 
-## Acknowledgements
+---
 
-Since this code uses [Lightning-Hydra-Template](https://github.com/ashleve/lightning-hydra-template), you have all the powers that come with it.
+- [Matcha-TTS (Original Repo)](https://github.com/shivammehta25/Matcha-TTS)  
 
-Other source code we would like to acknowledge:
 
-- [Coqui-TTS](https://github.com/coqui-ai/TTS/tree/dev): For helping me figure out how to make cython binaries pip installable and encouragement
-- [Hugging Face Diffusers](https://huggingface.co/): For their awesome diffusers library and its components
-- [Grad-TTS](https://github.com/huawei-noah/Speech-Backbones/tree/main/Grad-TTS): For the monotonic alignment search source code
-- [torchdyn](https://github.com/DiffEqML/torchdyn): Useful for trying other ODE solvers during research and development
-- [labml.ai](https://nn.labml.ai/transformers/rope/index.html): For the RoPE implementation

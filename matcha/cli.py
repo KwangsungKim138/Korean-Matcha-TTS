@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import soundfile as sf
 import torch
+import re
 
 from matcha.hifigan.config import v1
 from matcha.hifigan.denoiser import Denoiser
@@ -44,19 +45,23 @@ def plot_spectrogram_to_numpy(spectrogram, filename):
     fig.canvas.draw()
     plt.savefig(filename)
 
+_HANGUL_AND_PUNC = re.compile(r"[^가-힣0-9A-Za-z\s\.\,\?\!\-~]")
 
 def process_text(i: int, text: str, device: torch.device):
-    print(f"[{i}] - Input text: {text}")
-    x = torch.tensor(
-        intersperse(text_to_sequence(text, ["english_cleaners2"])[0], 0),
-        dtype=torch.long,
-        device=device,
-    )[None]
-    x_lengths = torch.tensor([x.shape[-1]], dtype=torch.long, device=device)
-    x_phones = sequence_to_text(x.squeeze(0).tolist())
-    print(f"[{i}] - Phonetised text: {x_phones[1::2]}")
+    # 0) 특수문자/이모지 등 제거 → OOV 방지
+    text = _HANGUL_AND_PUNC.sub(" ", text).strip()
 
-    return {"x_orig": text, "x": x, "x_lengths": x_lengths, "x_phones": x_phones}
+    # 1) phonemizer 미사용: cleaners를 한글/문자 기반으로 고정
+    seq, _cleaned = text_to_sequence(text, ["basic_cleaners"])
+
+    # 2) add_blank=True -> intersperse(0)
+    x = torch.tensor(intersperse(seq, 0), dtype=torch.long, device=device)[None]
+    x_lengths = torch.tensor([x.shape[-1]], dtype=torch.long, device=device)
+
+    # 3) IPA 역변환 출력 제거, 원문 혹은 cleaned만 출력
+    print(f"[{i}] - Cleaned text (no phonetising / phonemizer): {_cleaned}")
+
+    return {"x_orig": text, "x": x, "x_lengths": x_lengths, "x_phones": _cleaned}
 
 
 def get_texts(args):
@@ -125,7 +130,7 @@ def to_waveform(mel, vocoder, denoiser=None, denoiser_strength=0.00025):
 def save_to_folder(filename: str, output: dict, folder: str):
     folder = Path(folder)
     folder.mkdir(exist_ok=True, parents=True)
-    plot_spectrogram_to_numpy(np.array(output["mel"].squeeze().float().cpu()), f"{filename}.png")
+    plot_spectrogram_to_numpy(np.array(output["mel"].squeeze().float().cpu()), folder / f"{filename}.png")
     np.save(folder / f"{filename}", output["mel"].cpu().numpy())
     sf.write(folder / f"{filename}.wav", output["waveform"], 22050, "PCM_24")
     return folder.resolve() / f"{filename}.wav"
@@ -263,6 +268,11 @@ def cli():
     parser.add_argument("--batched", action="store_true", help="Batched inference (default: False)")
     parser.add_argument(
         "--batch_size", type=int, default=32, help="Batch size only useful when --batched (default: 32)"
+    )
+    
+    parser.add_argument(
+        "--no_phonemizer", action="store_true",
+        help="Skip phonemizer: feed raw text to text_to_sequence with basic_cleaners (Korean).",
     )
 
     args = parser.parse_args()
