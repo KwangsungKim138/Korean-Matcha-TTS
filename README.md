@@ -118,6 +118,20 @@ make train-kss
 python matcha/train.py experiment=kss
 ```
 
+- 50 epochs 학습 후 종료, 5 epoch마다 체크포인트 저장
+```bash
+python matcha/train.py experiment=kss \
+  trainer.max_epochs=50 \
+  callbacks.model_checkpoint.every_n_epochs=5
+```
+
+- 50 epochs 학습 후 종료, 1000 step마다 체크포인트 저장
+```bash
+python matcha/train.py experiment=kss \
+  trainer.max_epochs=50 \
+  callbacks.model_checkpoint.every_n_train_steps=1000
+```
+
 - 최소 메모리 모드 (미지원)
   ```bash
   python matcha/train.py experiment=kss_min_memory
@@ -141,6 +155,17 @@ matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --che
 - `--steps`: ODE 스텝 (값이 작을수록 빠르지만 노이즈↑)  
 - `--temperature`: 샘플링 temperature
 
+- download checkpoints
+  - [1810 steps trained](https://drive.google.com/file/d/1eNhmS-AczUZCM9gc51DtaPQTWNy8QScm/view?usp=drive_link)
+  - [3620 steps trained](https://drive.google.com/file/d/1sdjaAcckWl-0S6jcmGoFTKcZE9H-ye84/view?usp=drive_link)
+  - [5430 steps trained](https://drive.google.com/file/d/1jpUqQAQTF9WXsJLYE-sgWs_peTgNz3rw/view?usp=drive_link)
+  - [7240 steps trained](https://drive.google.com/file/d/11RGTlN_ZfWV1WnqlCz4TCBzkuT_lPGqc/view?usp=drive_link)
+  - [9050 steps trained](https://drive.google.com/file/d/13sOrfpCLbCANbPnRL9spbgBrq9G8PU3S/view?usp=drive_link)
+  - [10860 steps trained](https://drive.google.com/file/d/1onS0FACqc5x2VH3RDQUxsCYKOtwr_GMg/view?usp=drive_link)
+  - [12670 steps trained](https://drive.google.com/file/d/1eYxfQHta6BNLyfdbxIIRbVfnLQIfFCia/view?usp=drive_link)
+  - [14480 steps trained](https://drive.google.com/file/d/1Y5Rqidg227-1VGhXX9Y4fhoZsdE7oIPB/view?usp=drive_link)
+  - [16290 steps trained](https://drive.google.com/file/d/1Lx7TfZoz9xD1abz7G7XJEcioagQYeA_n/view?usp=sharing)
+  - [18100 steps trained](https://drive.google.com/file/d/1MLuDK7gfStKsJB7YhIS-i0uUE1ZI3YkI/view?usp=sharing)
 ---
 
 ## 4️⃣ 한국어 Matcha-TTS 개발 단계
