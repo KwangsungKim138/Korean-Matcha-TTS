@@ -134,7 +134,7 @@ python matcha/train.py experiment=kss
 Pre-trained **HiFi-GAN**에 의해 멜→오디오 변환이 수행됩니다.
 
 ```bash
-matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --checkpoint_path "<PATH_TO_CHECKPOINT>"   --vocoder hifigan_T2_v1   --steps 32   --out wavs/output.wav
+matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --checkpoint_path "<PATH_TO_CHECKPOINT>"   --vocoder hifigan_T2_v1   --steps 32   --out wavs/output
 ```
 
 `steps`와 `temperature`는 trade-off 관계
