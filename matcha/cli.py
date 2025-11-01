@@ -59,7 +59,7 @@ def process_text(i: int, text: str, device: torch.device):
     x_lengths = torch.tensor([x.shape[-1]], dtype=torch.long, device=device)
 
     # 3) IPA 역변환 출력 제거, 원문 혹은 cleaned만 출력
-    print(f"[{i}] - Cleaned text (no phonemiser): {_cleaned}")
+    print(f"[{i}] - Cleaned text (no phonetising / phonemizer): {_cleaned}")
 
     return {"x_orig": text, "x": x, "x_lengths": x_lengths, "x_phones": _cleaned}
 
