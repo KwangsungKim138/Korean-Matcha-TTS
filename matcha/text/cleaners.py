@@ -93,6 +93,19 @@ def basic_cleaners(text):
     text = collapse_whitespace(text)
     return text
 
+def korean_basic_cleaners(text: str) -> str:
+    # 1) 양쪽 공백 정리
+    text = text.strip()
+
+    # 2) 중복 공백 축소
+    import re
+    text = re.sub(r"\s+", " ", text)
+
+    # 3) 한글, 숫자, 공백, 기본 문장부호만 남기고 나머지 제거
+    text = re.sub(r"[^0-9A-Za-zㄱ-ㅎ가-힣\s\.\,\?\!]", "", text)
+
+    return text
+
 
 def transliteration_cleaners(text):
     """Pipeline for non-English text that transliterates to ASCII."""

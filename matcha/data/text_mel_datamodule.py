@@ -10,6 +10,7 @@ from lightning import LightningDataModule
 from torch.utils.data.dataloader import DataLoader
 
 from matcha.text import text_to_sequence
+from matcha.text.korean_g2p import graphemes_to_phonemes_korean
 from matcha.utils.audio import mel_spectrogram
 from matcha.utils.model import fix_len_compatibility, normalize
 from matcha.utils.utils import intersperse
@@ -224,11 +225,13 @@ class TextMelDataset(torch.utils.data.Dataset):
         return mel
 
     def get_text(self, text, add_blank=True):
-        text_norm, cleaned_text = text_to_sequence(text, self.cleaners)
+        phonemes = graphemes_to_phonemes_korean(text)
+        
+        phonemes_norm, cleaned_text = text_to_sequence(phonemes, self.cleaners)
         if self.add_blank:
-            text_norm = intersperse(text_norm, 0)
-        text_norm = torch.IntTensor(text_norm)
-        return text_norm, cleaned_text
+            phonemes_norm = intersperse(phonemes_norm, 0)
+        phonemes_norm = torch.IntTensor(phonemes_norm)
+        return phonemes_norm, cleaned_text
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
