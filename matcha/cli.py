@@ -45,7 +45,9 @@ def plot_spectrogram_to_numpy(spectrogram, filename):
     fig.canvas.draw()
     plt.savefig(filename)
 
+
 _HANGUL_AND_PUNC = re.compile(r"[^가-힣0-9A-Za-z\s\.\,\?\!\-~]")
+
 
 def process_text(i: int, text: str, device: torch.device):
     # 0) 특수문자/이모지 등 제거 → OOV 방지
@@ -269,9 +271,10 @@ def cli():
     parser.add_argument(
         "--batch_size", type=int, default=32, help="Batch size only useful when --batched (default: 32)"
     )
-    
+
     parser.add_argument(
-        "--no_phonemizer", action="store_true",
+        "--no_phonemizer",
+        action="store_true",
         help="Skip phonemizer: feed raw text to text_to_sequence with basic_cleaners (Korean).",
     )
 

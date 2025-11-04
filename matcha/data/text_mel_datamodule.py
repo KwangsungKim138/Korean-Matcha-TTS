@@ -205,7 +205,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             audio = audio.unsqeeze(0)
         # downmix to mono
         if audio.size(0) > 1:
-            audio = audio.mean(dim=0, keepdim=True) # [1, T]
+            audio = audio.mean(dim=0, keepdim=True)  # [1, T]
         # assert sr == self.sample_rate
         if sr != self.sample_rate:
             audio = resample(audio, sr, self.sample_rate)
@@ -220,13 +220,13 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_min,
             self.f_max,
             center=False,
-        ).squeeze() #[n_mels, T]
+        ).squeeze()  # [n_mels, T]
         mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
         return mel
 
     def get_text(self, text, add_blank=True):
         phonemes = graphemes_to_phonemes_korean(text)
-        
+
         phonemes_norm, cleaned_text = text_to_sequence(phonemes, self.cleaners)
         if self.add_blank:
             phonemes_norm = intersperse(phonemes_norm, 0)

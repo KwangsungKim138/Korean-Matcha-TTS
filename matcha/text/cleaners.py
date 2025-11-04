@@ -1,4 +1,4 @@
-""" from https://github.com/keithito/tacotron
+"""from https://github.com/keithito/tacotron
 
 Cleaners are transformations that run over the input text at both training and eval time.
 
@@ -93,12 +93,14 @@ def basic_cleaners(text):
     text = collapse_whitespace(text)
     return text
 
+
 def korean_basic_cleaners(text: str) -> str:
     # 1) 양쪽 공백 정리
     text = text.strip()
 
     # 2) 중복 공백 축소
     import re
+
     text = re.sub(r"\s+", " ", text)
 
     # 3) 한글, 숫자, 공백, 기본 문장부호만 남기고 나머지 제거
