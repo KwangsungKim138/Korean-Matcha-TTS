@@ -14,3 +14,14 @@ defaults:
 tags: [kss, phoneme]
 
 run_name: kss_phoneme
+
+trainer:
+  max_epochs: -1        # 유지
+  max_steps: 50000      # ✅ 종료 조건 추가
+
+callbacks:
+  model_checkpoint:
+    every_n_train_steps: 5000
+    save_last: true
+    save_top_k: -1
+    mode: max
