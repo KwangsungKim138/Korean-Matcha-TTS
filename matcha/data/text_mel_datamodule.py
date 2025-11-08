@@ -252,19 +252,22 @@ class TextMelDataset(torch.utils.data.Dataset):
         s = text.strip()
         
         if self.text_route == "grapheme":
-            clean_text = _norm_ws(s)
+            # clean_text = _norm_ws(s)
+            final_text = text
             cleaners = ["korean_basic_cleaners"]
         elif self.text_route == "phoneme":
-            clean_text = _norm_ws(self._g2p(s))          # g2pk2
+            # clean_text = _norm_ws(self._g2p(s))          # g2pk2
+            final_text = text
             cleaners = ["korean_basic_cleaners"]
         elif self.text_route == "ipa":
-            ko_phonemes = _norm_ws(self._g2p(s))             # g2pk2
-            clean_text = _to_ipa(ko_phonemes)                # IPA
+            # ko_phonemes = _norm_ws(self._g2p(s))             # g2pk2
+            # clean_text = _to_ipa(ko_phonemes)                # IPA
+            final_text = text
             cleaners = ["ipa_cleaners"]
         else:
             raise ValueError(f"Unknown text_route: {self.text_route}")
 
-        phonemes_norm, cleaned_text = text_to_sequence(clean_text, cleaners)
+        phonemes_norm, cleaned_text = text_to_sequence(final_text, cleaners)
 
         # 2) add_blank 한 번만
         if self.add_blank:

@@ -2,6 +2,7 @@ _target_: matcha.data.text_mel_datamodule.TextMelDataModule
 name: kss_phoneme
 train_filelist_path: data/filelists/kss_phoneme_train.txt
 valid_filelist_path: data/filelists/kss_phoneme_val.txt
+text_route: phoneme
 batch_size: 32
 num_workers: 8
 pin_memory: True
