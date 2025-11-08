@@ -4,7 +4,7 @@ import random
 import re
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 # ---- optional deps (install when using that route) ----
 # pip install g2pk2 phonemizer
@@ -99,7 +99,7 @@ def _to_phoneme_g2pk2(s: str, g2p) -> str:
     return _norm_ws(s)
 
 
-def _to_ipa_batch(lines, chunk_size=512, njobs=None, with_stress=False, progress=True):
+def _to_ipa_batch(lines, chunk_size=1024, njobs=None, with_stress=False, progress=True):
     """
     lines: List[str] — 한국어 문장 리스트
     chunk_size: int — 한 번에 phonemize에 넘길 문장 수(256~1024 권장)
@@ -144,7 +144,7 @@ def _to_ipa_batch(lines, chunk_size=512, njobs=None, with_stress=False, progress
 
 def _to_ipa(text: str) -> str:
     # 단일 문장용 래퍼 (진행바/병렬 꺼서 오버헤드 최소화)
-    return _to_ipa_batch([text], chunk_size=512, njobs=None, with_stress=False, progress=False)[0]
+    return _to_ipa_batch([text], chunk_size=1024, njobs=None, with_stress=False, progress=False)[0]
 
 
 def _convert_text(route: str, text: str, g2p) -> str:
@@ -165,7 +165,12 @@ def _convert_text(route: str, text: str, g2p) -> str:
     else:
         raise ValueError(f"Unknown route: {route}")
 
-def _build_items(route: str, id2text: Dict[str, str]) -> List[str]:
+def _build_items(
+    route: str,
+    id2text: Dict[str, str],
+    ipa_chunk: int = 1024,
+    ipa_njobs: Optional[int] = None,
+) -> List[str]:
     wavs: List[Path] = _scan_wavs()
     # 1) 원문 텍스트 한꺼번에 수집
     rel_paths: List[str] = []
@@ -215,10 +220,10 @@ def _build_items(route: str, id2text: Dict[str, str]) -> List[str]:
         # 여기가 핵심: 한 방에 phonemize
         ipa_texts = _to_ipa_batch(
             ph_texts,
-            chunk_size=1024,   # 길면 1024, 보수적으로 512
-            njobs=None,        # CPU 코어 수 자동
+            chunk_size=ipa_chunk,
+            njobs=(None if ipa_njobs in (None, 0) else ipa_njobs),
             with_stress=False,
-            progress=True,     # tqdm 진행바
+            progress=True,
         )
         for rel, txt in zip(rel_paths, ipa_texts):
             items.append(f"{rel}|{txt}")
@@ -248,7 +253,7 @@ def main():
     ap.add_argument("--val_ratio", type=float, default=0.10)
     ap.add_argument("--min_val", type=int, default=100)
     ap.add_argument("--out_prefix", type=str, default=None)
-    # 선택: ipa 배치 파라미터
+    
     ap.add_argument("--ipa_chunk", type=int, default=1024)
     ap.add_argument("--ipa_njobs", type=int, default=0, help="0=auto")
     args = ap.parse_args()
@@ -258,19 +263,12 @@ def main():
 
     id2text = _read_transcript(TRANSCRIPT)
 
-    # ipa 파라미터 주입 (간단히 오버라이드하려면 _to_ipa_batch의 기본값을 바꿔도 됨)
-    if args.route == "ipa":
-        # 간단히 래핑해서 기본값 갱신
-        def _ipa_batch_with_args(lines):
-            return _to_ipa_batch(
-                lines,
-                chunk_size=args.ipa_chunk,
-                njobs=(None if args.ipa_njobs in (None, 0) else args.ipa_njobs),
-                with_stress=False,
-                progress=True,
-            )
-        globals()["_to_ipa_batch"] = _ipa_batch_with_args  # 주입 (간단 해킹)
-    items = _build_items(args.route, id2text)
+    items = _build_items(
+        args.route,
+        id2text,
+        ipa_chunk=args.ipa_chunk,
+        ipa_njobs=args.ipa_njobs,
+    )
 
     prefix = args.out_prefix or f"kss_{args.route}"
     train_p, val_p = _split_and_write(items, prefix, args.val_ratio, args.min_val)
