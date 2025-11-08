@@ -1,0 +1,27 @@
+_target_: matcha.data.text_mel_datamodule.TextMelDataModule
+name: kss_phoneme_ipa
+train_filelist_path: data/filelists/kss_phoneme_ipa_train.txt
+valid_filelist_path: data/filelists/kss_phoneme_ipa_val.txt
+batch_size: 32
+num_workers: 8
+pin_memory: True
+cleaners: [ipa_cleaners]
+add_blank: True
+n_spks: 1
+
+# Mel & Audio Parameters
+n_fft: 1024
+n_feats: 80 # means n_mels
+sample_rate: 22050
+hop_length: 256
+win_length: 1024
+f_min: 0
+f_max: 8000
+
+data_statistics:  # Computed for KSS dataset
+  #{'mel_mean': -6.562135219573975, 'mel_std': 2.7914016246795654}
+  mel_mean: -6.562135219573975
+  mel_std: 2.7914016246795654
+
+seed: ${seed}
+load_durations: false
