@@ -103,7 +103,7 @@ def korean_basic_cleaners(text: str) -> str:
 
     text = re.sub(r"\s+", " ", text)
 
-    # 3) 한글, 숫자, 공백, 기본 문장부호만 남기고 나머지 제거
+    # 3) 한글, 로마 알파벳, 숫자, 공백, 기본 문장부호만 남기고 나머지 제거
     text = re.sub(r"[^0-9A-Za-zㄱ-ㅎ가-힣\s\.\,\?\!]", "", text)
 
     return text

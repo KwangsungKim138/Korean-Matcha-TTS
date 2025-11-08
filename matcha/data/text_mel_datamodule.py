@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
+import re
 import torch
+from g2pk2 import G2p
+from phonemizer import phonemize
 import torchaudio as ta
 from torchaudio.functional import resample
 from lightning import LightningDataModule
@@ -15,6 +18,20 @@ from matcha.utils.audio import mel_spectrogram
 from matcha.utils.model import fix_len_compatibility, normalize
 from matcha.utils.utils import intersperse
 
+
+_ALLOWED_IPA = set(
+    "ɑɐɒæɓʙβɔɕçɗɖðʤəɘɚɛɜɝɞɟʄɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮʟɱɯɰŋɳɲɴøɵɸθœɶʘɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ"
+)
+_WS = re.compile(r"\s+")
+
+
+def _norm_ws(s: str) -> str:
+    return _WS.sub(" ", s).strip()
+
+def _to_ipa(s: str) -> str:
+    ipa = phonemize(s, language="ko", backend="espeak", strip=True, with_stress=False)
+    ipa = "".join(ch if ch in _ALLOWED_IPA else " " for ch in ipa)
+    return _norm_ws(ipa)
 
 def parse_filelist(filelist_path, split_char="|"):
     with open(filelist_path, encoding="utf-8") as f:
@@ -44,6 +61,8 @@ class TextMelDataModule(LightningDataModule):
         data_statistics,
         seed,
         load_durations,
+        text_route="grapheme",
+        **kwargs,
     ):
         super().__init__()
 
@@ -74,6 +93,7 @@ class TextMelDataModule(LightningDataModule):
             self.hparams.data_statistics,
             self.hparams.seed,
             self.hparams.load_durations,
+            text_route=self.hparams.text_route,
         )
         self.validset = TextMelDataset(  # pylint: disable=attribute-defined-outside-init
             self.hparams.valid_filelist_path,
@@ -90,6 +110,7 @@ class TextMelDataModule(LightningDataModule):
             self.hparams.data_statistics,
             self.hparams.seed,
             self.hparams.load_durations,
+            text_route=self.hparams.text_route,
         )
 
     def train_dataloader(self):
@@ -142,6 +163,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         data_parameters=None,
         seed=None,
         load_durations=False,
+        text_route="grapheme",
     ):
         self.filepaths_and_text = parse_filelist(filelist_path)
         self.n_spks = n_spks
@@ -155,6 +177,8 @@ class TextMelDataset(torch.utils.data.Dataset):
         self.f_min = f_min
         self.f_max = f_max
         self.load_durations = load_durations
+        self.text_route = text_route
+        self._g2p = G2p()
 
         if data_parameters is not None:
             self.data_parameters = data_parameters
@@ -200,16 +224,14 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def get_mel(self, filepath):
         audio, sr = ta.load(filepath)  # [C, T] 또는 [T]
-        # [T] -> [1, T]
         if audio.dim() == 1:
-            audio = audio.unsqeeze(0)
-        # downmix to mono
+            audio = audio.unsqueeze(0)          # ← unsqueeze 오타 수정
         if audio.size(0) > 1:
             audio = audio.mean(dim=0, keepdim=True)  # [1, T]
-        # assert sr == self.sample_rate
         if sr != self.sample_rate:
             audio = resample(audio, sr, self.sample_rate)
             sr = self.sample_rate
+
         mel = mel_spectrogram(
             audio,
             self.n_fft,
@@ -221,17 +243,34 @@ class TextMelDataset(torch.utils.data.Dataset):
             self.f_max,
             center=False,
         ).squeeze()  # [n_mels, T]
+
         mel = normalize(mel, self.data_parameters["mel_mean"], self.data_parameters["mel_std"])
         return mel
 
     def get_text(self, text, add_blank=True):
-        phonemes = graphemes_to_phonemes_korean(text)
+        
+        s = text.strip()
+        
+        if self.text_route == "grapheme":
+            clean_text = _norm_ws(s)
+            cleaners = ["korean_basic_cleaners"]
+        elif self.text_route == "phoneme":
+            clean_text = _norm_ws(self._g2p(s))          # g2pk2
+            cleaners = ["korean_basic_cleaners"]
+        elif self.text_route == "ipa":
+            ko_phonemes = _norm_ws(self._g2p(s))             # g2pk2
+            clean_text = _to_ipa(ko_phonemes)                # IPA
+            cleaners = ["ipa_cleaners"]
+        else:
+            raise ValueError(f"Unknown text_route: {self.text_route}")
 
-        phonemes_norm, cleaned_text = text_to_sequence(phonemes, self.cleaners)
+        phonemes_norm, cleaned_text = text_to_sequence(clean_text, cleaners)
+
+        # 2) add_blank 한 번만
         if self.add_blank:
             phonemes_norm = intersperse(phonemes_norm, 0)
-        phonemes_norm = torch.IntTensor(phonemes_norm)
-        return phonemes_norm, cleaned_text
+
+        return torch.IntTensor(phonemes_norm), cleaned_text
 
     def __getitem__(self, index):
         datapoint = self.get_datapoint(self.filepaths_and_text[index])
