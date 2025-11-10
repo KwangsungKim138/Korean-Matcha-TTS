@@ -13,3 +13,15 @@ defaults:
 tags: [kss, grapheme]
 
 run_name: kss_grapheme
+
+
+trainer:
+  max_epochs: -1
+  max_steps: 50000
+
+callbacks:
+  model_checkpoint:
+    every_n_train_steps: 5000
+    save_last: true
+    save_top_k: -1
+    mode: max
