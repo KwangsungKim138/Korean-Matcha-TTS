@@ -3,17 +3,16 @@
 # to execute this experiment run:
 # python train.py experiment=multispeaker
 
-
 defaults:
-  - override /data: kss_phoneme.yaml
-  - override /model: matcha_kor_phoneme.yaml
+  - override /data: kss_original.yaml
+  - override /model: matcha_kor_original.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: [kss, phoneme]
+tags: [kss, original]
 
-run_name: kss_phoneme
+run_name: kss_original
 
 trainer:
   max_epochs: -1        # 유지

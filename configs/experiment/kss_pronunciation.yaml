@@ -3,21 +3,21 @@
 # to execute this experiment run:
 # python train.py experiment=multispeaker
 
+
 defaults:
-  - override /data: kss_grapheme.yaml
-  - override /model: matcha_kor_grapheme.yaml
+  - override /data: kss_pronunciation.yaml
+  - override /model: matcha_kor_pronunciation.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: [kss, grapheme]
+tags: [kss, pronunciation]
 
-run_name: kss_grapheme
-
+run_name: kss_pronunciation
 
 trainer:
-  max_epochs: -1
-  max_steps: 50000
+  max_epochs: -1        # 유지
+  max_steps: 50000      # 종료 조건 추가
 
 callbacks:
   model_checkpoint:

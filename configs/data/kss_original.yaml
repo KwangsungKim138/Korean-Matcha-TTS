@@ -1,11 +1,11 @@
 _target_: matcha.data.text_mel_datamodule.TextMelDataModule
-name: kss_phoneme_ipa
-train_filelist_path: data/filelists/kss_phoneme_ipa_train.txt
-valid_filelist_path: data/filelists/kss_phoneme_ipa_val.txt
+name: kss_original
+train_filelist_path: data/filelists/kss_original_train.txt
+valid_filelist_path: data/filelists/kss_original_val.txt
 batch_size: 32
 num_workers: 8
 pin_memory: True
-cleaners: [ipa_cleaners]
+cleaners: [korean_basic_cleaners]
 add_blank: True
 n_spks: 1
 

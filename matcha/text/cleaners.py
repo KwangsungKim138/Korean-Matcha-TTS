@@ -108,6 +108,18 @@ def korean_basic_cleaners(text: str) -> str:
 
     return text
 
+def korean_phoneme_cleaners(text: str) -> str:
+    """
+    Cleaners for Korean phoneme-level inputs (ㄱ, ㅏ, ㄹ˳, ㅈ˟, ㄴʲ ...).
+    최소한의 정리만 수행, 어떤 문자도 삭제하지 않음
+    """
+    # 양쪽 공백 제거
+    text = text.strip()
+
+    # 여러 공백을 하나로
+    text = re.sub(r"\s+", " ", text)
+
+    return text
 
 def transliteration_cleaners(text):
     """Pipeline for non-English text that transliterates to ASCII."""

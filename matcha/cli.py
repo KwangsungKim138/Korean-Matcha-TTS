@@ -20,6 +20,7 @@ from matcha.hifigan.models import Generator as HiFiGAN
 from matcha.models.matcha_tts import MatchaTTS
 from matcha.text import sequence_to_text, text_to_sequence
 from matcha.text.korean_g2p import graphemes_to_phonemes_korean
+from matcha.text.korean_phoneme import hangul_to_phoneme
 from matcha.utils.utils import assert_model_downloaded, get_user_data_dir, intersperse
 
 MATCHA_URLS = {
@@ -58,41 +59,37 @@ _WS = re.compile(r"\s+")
 
 _G2P = G2p()
 
-def to_ipa(text: str) -> str:
-    ipa = phonemize(text, language="ko", backend="espeak", strip=True, with_stress=False)
-    ipa = "".join(ch if ch in _ALLOWED_IPA else " " for ch in ipa)
-    return _WS.sub(" ", ipa).strip()
-
-def to_korean_phonemes(text: str) -> str:
+def to_korean_pronunciation(text: str) -> str:
     s = _G2P(text)  # 전역 G2p 인스턴스 사용
     s = _HANGUL_AND_PUNC.sub(" ", s)
     return _WS.sub(" ", s).strip()
 
 def process_text(i: int, text: str, device: torch.device, route: str):
     raw_text = text.strip()
-    # 0) 공통: 허용 문자 외 간단 정리
     text0 = _HANGUL_AND_PUNC.sub(" ", raw_text)
     text0 = _WS.sub(" ", text0).strip()
 
-    if route == "grapheme":
+    if route == "original":
         clean_text = text0
         cleaners = ["korean_basic_cleaners"]
-    elif route == "phoneme":
-        clean_text = to_korean_phonemes(text0)
+
+    elif route == "pronunciation":
+        clean_text = to_korean_pronunciation(text0)  # g2pk2 → 완성형 발음
         cleaners = ["korean_basic_cleaners"]
-    elif route == "ipa":
-        ko_phoneme = to_korean_phonemes(text0)
-        clean_text = to_ipa(ko_phoneme)
-        cleaners = ["ipa_cleaners"]
+
+    elif route == "phoneme":
+        # custom phoneme 체계 사용
+        clean_text = hangul_to_phoneme(raw_text)
+        cleaners = ["phoneme_cleaners"]
+
     else:
         raise ValueError(f"Unknown route: {route}")
 
     seq, cleaned_view = text_to_sequence(clean_text, cleaners)
 
-    if not seq:  # 폴백 방지
-        seq = [1]  # 프로젝트에서 유효한 토큰 ID로 교체 (e.g., PAD 대신 임의 토큰)
+    if not seq:
+        seq = [1]
 
-    # add_blank=True 가정: 0(blank) intersperse
     seq = intersperse(seq, 0)
 
     x = torch.tensor(seq, dtype=torch.long, device=device)[None, :]
@@ -101,7 +98,6 @@ def process_text(i: int, text: str, device: torch.device, route: str):
     print(f"[{i}] - Route={route} | cleaned: {cleaned_view}")
     return {"x_orig": raw_text, "x": x, "x_lengths": x_lengths, "x_clean": cleaned_view}
 
-
 def get_texts(args):
     if args.text:
         texts = [args.text]
@@ -109,7 +105,6 @@ def get_texts(args):
         with open(args.file, encoding="utf-8") as f:
             texts = f.readlines()
     return texts
-
 
 def assert_required_models_available(args):
     save_dir = get_user_data_dir()
@@ -310,9 +305,9 @@ def cli():
     parser.add_argument(
         "--route",
         type=str,
-        default="grapheme",
-        choices=["grapheme", "phoneme", "ipa"],
-        help="Text route: grapheme (Korean grapheme), phoneme (Korean phoneme), ipa (g2pk2→IPA).",
+        default="original",
+        choices=["original", "pronunciation", "phoneme"],
+        help="Text route: original (original text), pronunciation (Korean pronunciation), phoneme (Korean phoneme).",
     )
 
     args = parser.parse_args()

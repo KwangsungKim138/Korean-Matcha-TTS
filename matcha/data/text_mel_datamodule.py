@@ -28,11 +28,6 @@ _WS = re.compile(r"\s+")
 def _norm_ws(s: str) -> str:
     return _WS.sub(" ", s).strip()
 
-def _to_ipa(s: str) -> str:
-    ipa = phonemize(s, language="ko", backend="espeak", strip=True, with_stress=False)
-    ipa = "".join(ch if ch in _ALLOWED_IPA else " " for ch in ipa)
-    return _norm_ws(ipa)
-
 def parse_filelist(filelist_path, split_char="|"):
     with open(filelist_path, encoding="utf-8") as f:
         filepaths_and_text = [line.strip().split(split_char) for line in f]
@@ -248,28 +243,27 @@ class TextMelDataset(torch.utils.data.Dataset):
         return mel
 
     def get_text(self, text, add_blank=True):
-        
         s = text.strip()
-        
-        if self.text_route == "grapheme":
-            # clean_text = _norm_ws(s)
-            final_text = text
+
+        if self.text_route == "original":
+            final_text = s
             cleaners = ["korean_basic_cleaners"]
+
+        elif self.text_route == "pronunciation":
+            final_text = s
+            cleaners = ["korean_basic_cleaners"]
+
         elif self.text_route == "phoneme":
-            # clean_text = _norm_ws(self._g2p(s))          # g2pk2
-            final_text = text
-            cleaners = ["korean_basic_cleaners"]
-        elif self.text_route == "ipa":
-            # ko_phonemes = _norm_ws(self._g2p(s))             # g2pk2
-            # clean_text = _to_ipa(ko_phonemes)                # IPA
-            final_text = text
-            cleaners = ["ipa_cleaners"]
+            final_text = s
+            cleaners = ["korean_phoneme_cleaners"]
+            # 주의: 여기서 g2pk2나 자모분해, ipa 변환 절대 X
+
         else:
             raise ValueError(f"Unknown text_route: {self.text_route}")
 
+        # 이미 filelist 단계에서 학습 가능한 텍스트가 완성됨
         phonemes_norm, cleaned_text = text_to_sequence(final_text, cleaners)
 
-        # 2) add_blank 한 번만
         if self.add_blank:
             phonemes_norm = intersperse(phonemes_norm, 0)
 
