@@ -56,7 +56,7 @@ class TextMelDataModule(LightningDataModule):
         data_statistics,
         seed,
         load_durations,
-        text_route="grapheme",
+        text_route="phoneme",
         **kwargs,
     ):
         super().__init__()
@@ -158,7 +158,7 @@ class TextMelDataset(torch.utils.data.Dataset):
         data_parameters=None,
         seed=None,
         load_durations=False,
-        text_route="grapheme",
+        text_route="phoneme",
     ):
         self.filepaths_and_text = parse_filelist(filelist_path)
         self.n_spks = n_spks
