@@ -80,7 +80,7 @@ def process_text(i: int, text: str, device: torch.device, route: str):
     elif route == "phoneme":
         # custom phoneme 체계 사용
         clean_text = hangul_to_phoneme(raw_text)
-        cleaners = ["phoneme_cleaners"]
+        cleaners = ["korean_phoneme_cleaners"]
 
     else:
         raise ValueError(f"Unknown route: {route}")

@@ -67,10 +67,11 @@ def hangul_to_phoneme(text: str) -> str:
     for ch in t:
         if ch == " ":
             eojeol_first = True
+            units.append(ch)
             continue
 
         units.extend(_split_syllable_with_tags(ch, eojeol_first))
         eojeol_first = False
 
     # 3) 토큰 간 공백으로 join → 모델이 읽을 수 있는 phoneme 스트림
-    return " ".join(units)
+    return "".join(units)

@@ -13,8 +13,8 @@ _hangul = [chr(c) for c in range(0xAC00, 0xD7A4)]
 _digits = list("0123456789")
 
 _cho = [
-    "ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ",
-    "ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+    "ㄱ˟","ㄱ","ㄲ","ㄴ","ㄴʲ","ㄷ˟","ㄷ","ㄸ","ㄹ","ㄹʲ","ㅁ","ㅂ˟","ㅂ","ㅃ",
+    "ㅅ","ㅅʲ","ㅆ","ㅆʲ","ㅇ","ㅈ˟","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ","ㅎʲ"
 ]
 
 _jung = [
@@ -25,15 +25,12 @@ _jung = [
 ]
 
 _jong = [
-    "ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ",
-    "ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ",
-    "ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"
+    "ㄱ˳","ㄴ˳","ㄷ˳","ㄹ˳",
+    "ㅁ˳","ㅂ˳","ㅇ˳"
 ]
 
-_tags = ["˟", "˳", "ʲ"]
-
 # Export all symbols:
-symbols = [_pad] + list(_punctuation) + list(_letters) + list(_letters_ipa) + list(_hangul) + list(_digits) + list(_cho) + list(_jung) + list(_jong) + list(_tags)
+symbols = [_pad] + list(_punctuation) + list(_letters) + list(_letters_ipa) + list(_hangul) + list(_digits) + list(_cho) + list(_jung) + list(_jong)
 
 # Special symbol ids
 SPACE_ID = symbols.index(" ")
