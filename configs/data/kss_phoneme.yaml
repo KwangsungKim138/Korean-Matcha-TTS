@@ -1,11 +1,11 @@
 _target_: matcha.data.text_mel_datamodule.TextMelDataModule
-name: kss
-train_filelist_path: data/filelists/kss_train.txt
-valid_filelist_path: data/filelists/kss_val.txt
+name: kss_phoneme
+train_filelist_path: data/filelists/kss_phoneme_train.txt
+valid_filelist_path: data/filelists/kss_phoneme_val.txt
 batch_size: 32
 num_workers: 8
 pin_memory: True
-cleaners: [basic_cleaners]
+cleaners: [ipa_cleaners]
 add_blank: True
 n_spks: 1
 

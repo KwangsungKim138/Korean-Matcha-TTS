@@ -1,4 +1,4 @@
-""" from https://github.com/keithito/tacotron
+"""from https://github.com/keithito/tacotron
 
 Cleaners are transformations that run over the input text at both training and eval time.
 
@@ -93,6 +93,33 @@ def basic_cleaners(text):
     text = collapse_whitespace(text)
     return text
 
+
+def korean_basic_cleaners(text: str) -> str:
+    # 1) 양쪽 공백 정리
+    text = text.strip()
+
+    # 2) 중복 공백 축소
+    import re
+
+    text = re.sub(r"\s+", " ", text)
+
+    # 3) 한글, 로마 알파벳, 숫자, 공백, 기본 문장부호만 남기고 나머지 제거
+    text = re.sub(r"[^0-9A-Za-zㄱ-ㅎ가-힣\s\.\,\?\!]", "", text)
+
+    return text
+
+def korean_phoneme_cleaners(text: str) -> str:
+    """
+    Cleaners for Korean phoneme-level inputs (ㄱ, ㅏ, ㄹ˳, ㅈ˟, ㄴʲ ...).
+    최소한의 정리만 수행, 어떤 문자도 삭제하지 않음
+    """
+    # 양쪽 공백 제거
+    text = text.strip()
+
+    # 여러 공백을 하나로
+    text = re.sub(r"\s+", " ", text)
+
+    return text
 
 def transliteration_cleaners(text):
     """Pipeline for non-English text that transliterates to ASCII."""

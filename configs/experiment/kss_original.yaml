@@ -1,0 +1,26 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=multispeaker
+
+defaults:
+  - override /data: kss_original.yaml
+  - override /model: matcha_kor_original.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: [kss, original]
+
+run_name: kss_original
+
+trainer:
+  max_epochs: -1        # 유지
+  max_steps: 50000      # 종료 조건 추가
+
+callbacks:
+  model_checkpoint:
+    every_n_train_steps: 5000
+    save_last: true
+    save_top_k: -1
+    mode: max

@@ -2,13 +2,16 @@ import argparse
 import datetime as dt
 import os
 import warnings
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import soundfile as sf
 import torch
 import re
+
+from pathlib import Path
+from g2pk2 import G2p
+from phonemizer import phonemize
+
 
 from matcha.hifigan.config import v1
 from matcha.hifigan.denoiser import Denoiser
@@ -16,6 +19,8 @@ from matcha.hifigan.env import AttrDict
 from matcha.hifigan.models import Generator as HiFiGAN
 from matcha.models.matcha_tts import MatchaTTS
 from matcha.text import sequence_to_text, text_to_sequence
+from matcha.text.korean_g2p import graphemes_to_phonemes_korean
+from matcha.text.korean_phoneme import hangul_to_phoneme
 from matcha.utils.utils import assert_model_downloaded, get_user_data_dir, intersperse
 
 MATCHA_URLS = {
@@ -45,24 +50,53 @@ def plot_spectrogram_to_numpy(spectrogram, filename):
     fig.canvas.draw()
     plt.savefig(filename)
 
+
 _HANGUL_AND_PUNC = re.compile(r"[^가-힣0-9A-Za-z\s\.\,\?\!\-~]")
+_ALLOWED_IPA = set(
+    "ɑɐɒæɓʙβɔɕçɗɖðʤəɘɚɛɜɝɞɟʄɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮʟɱɯɰŋɳɲɴøɵɸθœɶʘɹɺɾɻʀʁɽʂʃʈʧʉʊʋⱱʌɣɤʍχʎʏʑʐʒʔʡʕʢǀǁǂǃˈˌːˑʼʴʰʱʲʷˠˤ˞↓↑→↗↘'̩'ᵻ"
+)
+_WS = re.compile(r"\s+")
 
-def process_text(i: int, text: str, device: torch.device):
-    # 0) 특수문자/이모지 등 제거 → OOV 방지
-    text = _HANGUL_AND_PUNC.sub(" ", text).strip()
+_G2P = G2p()
 
-    # 1) phonemizer 미사용: cleaners를 한글/문자 기반으로 고정
-    seq, _cleaned = text_to_sequence(text, ["basic_cleaners"])
+def to_korean_syllable(text: str) -> str:
+    s = _G2P(text)  # 전역 G2p 인스턴스 사용
+    s = _HANGUL_AND_PUNC.sub(" ", s)
+    return _WS.sub(" ", s).strip()
 
-    # 2) add_blank=True -> intersperse(0)
-    x = torch.tensor(intersperse(seq, 0), dtype=torch.long, device=device)[None]
+def process_text(i: int, text: str, device: torch.device, route: str):
+    raw_text = text.strip()
+    text0 = _HANGUL_AND_PUNC.sub(" ", raw_text)
+    text0 = _WS.sub(" ", text0).strip()
+
+    if route == "original":
+        clean_text = text0
+        cleaners = ["korean_basic_cleaners"]
+
+    elif route == "syllable":
+        clean_text = to_korean_syllable(text0)  # g2pk2 → 완성형 발음
+        cleaners = ["korean_basic_cleaners"]
+
+    elif route == "phoneme":
+        # custom phoneme 체계 사용
+        clean_text = hangul_to_phoneme(raw_text)
+        cleaners = ["korean_phoneme_cleaners"]
+
+    else:
+        raise ValueError(f"Unknown route: {route}")
+
+    seq, cleaned_view = text_to_sequence(clean_text, cleaners)
+
+    if not seq:
+        seq = [1]
+
+    seq = intersperse(seq, 0)
+
+    x = torch.tensor(seq, dtype=torch.long, device=device)[None, :]
     x_lengths = torch.tensor([x.shape[-1]], dtype=torch.long, device=device)
 
-    # 3) IPA 역변환 출력 제거, 원문 혹은 cleaned만 출력
-    print(f"[{i}] - Cleaned text (no phonetising / phonemizer): {_cleaned}")
-
-    return {"x_orig": text, "x": x, "x_lengths": x_lengths, "x_phones": _cleaned}
-
+    print(f"[{i}] - Route={route} | cleaned: {cleaned_view}")
+    return {"x_orig": raw_text, "x": x, "x_lengths": x_lengths, "x_clean": cleaned_view}
 
 def get_texts(args):
     if args.text:
@@ -72,11 +106,10 @@ def get_texts(args):
             texts = f.readlines()
     return texts
 
-
 def assert_required_models_available(args):
     save_dir = get_user_data_dir()
-    if not hasattr(args, "checkpoint_path") and args.checkpoint_path is None:
-        model_path = args.checkpoint_path
+    if args.checkpoint_path is not None:
+        model_path = Path(args.checkpoint_path)
     else:
         model_path = save_dir / f"{args.model}.ckpt"
         assert_model_downloaded(model_path, MATCHA_URLS[args.model])
@@ -212,7 +245,7 @@ def validate_args_for_single_speaker_model(args):
 @torch.inference_mode()
 def cli():
     parser = argparse.ArgumentParser(
-        description=" 🍵 Matcha-TTS: A fast TTS architecture with conditional flow matching"
+        description=" 🍵 Korean-Matcha-TTS: A fast TTS architecture with conditional flow matching"
     )
     parser.add_argument(
         "--model",
@@ -269,10 +302,12 @@ def cli():
     parser.add_argument(
         "--batch_size", type=int, default=32, help="Batch size only useful when --batched (default: 32)"
     )
-    
     parser.add_argument(
-        "--no_phonemizer", action="store_true",
-        help="Skip phonemizer: feed raw text to text_to_sequence with basic_cleaners (Korean).",
+        "--route",
+        type=str,
+        default="original",
+        choices=["original", "syllable", "phoneme"],
+        help="Text route: original (original text), syllable (Korean syllable), phoneme (Korean phoneme).",
     )
 
     args = parser.parse_args()
@@ -326,9 +361,9 @@ def batched_collate_fn(batch):
 def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
     total_rtf = []
     total_rtf_w = []
-    processed_text = [process_text(i, text, "cpu") for i, text in enumerate(texts)]
+    processed_texts = [process_text(i+1, t, device, args.route) for i, t in enumerate(texts)]
     dataloader = torch.utils.data.DataLoader(
-        BatchedSynthesisDataset(processed_text),
+        BatchedSynthesisDataset(processed_texts),
         batch_size=args.batch_size,
         collate_fn=batched_collate_fn,
         num_workers=8,
@@ -349,8 +384,8 @@ def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
         output["waveform"] = to_waveform(output["mel"], vocoder, denoiser, args.denoiser_strength)
         t = (dt.datetime.now() - start_t).total_seconds()
         rtf_w = t * 22050 / (output["waveform"].shape[-1])
-        print(f"[🍵-Batch: {i}] Matcha-TTS RTF: {output['rtf']:.4f}")
-        print(f"[🍵-Batch: {i}] Matcha-TTS + VOCODER RTF: {rtf_w:.4f}")
+        print(f"[🍵-Batch: {i}] Korean-Matcha-TTS RTF: {output['rtf']:.4f}")
+        print(f"[🍵-Batch: {i}] Korean-Matcha-TTS + VOCODER RTF: {rtf_w:.4f}")
         total_rtf.append(output["rtf"])
         total_rtf_w.append(rtf_w)
         for j in range(output["mel"].shape[0]):
@@ -361,9 +396,9 @@ def batched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
             print(f"[🍵-{j}] Waveform saved: {location}")
 
     print("".join(["="] * 100))
-    print(f"[🍵] Average Matcha-TTS RTF: {np.mean(total_rtf):.4f} ± {np.std(total_rtf)}")
-    print(f"[🍵] Average Matcha-TTS + VOCODER RTF: {np.mean(total_rtf_w):.4f} ± {np.std(total_rtf_w)}")
-    print("[🍵] Enjoy the freshly whisked 🍵 Matcha-TTS!")
+    print(f"[🍵] Average Korean-Matcha-TTS RTF: {np.mean(total_rtf):.4f} ± {np.std(total_rtf)}")
+    print(f"[🍵] Average Korean-Matcha-TTS + VOCODER RTF: {np.mean(total_rtf_w):.4f} ± {np.std(total_rtf_w)}")
+    print("[🍵] Enjoy the freshly whisked 🍵 Korean-Matcha-TTS!")
 
 
 def unbatched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
@@ -375,9 +410,9 @@ def unbatched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
 
         print("".join(["="] * 100))
         text = text.strip()
-        text_processed = process_text(i, text, device)
+        text_processed = process_text(i, text, device, args.route)
 
-        print(f"[🍵] Whisking Matcha-T(ea)TS for: {i}")
+        print(f"[🍵] Whisking Korean-Matcha-T(ea)TS for: {i}")
         start_t = dt.datetime.now()
         output = model.synthesise(
             text_processed["x"],
@@ -391,8 +426,8 @@ def unbatched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
         # RTF with HiFiGAN
         t = (dt.datetime.now() - start_t).total_seconds()
         rtf_w = t * 22050 / (output["waveform"].shape[-1])
-        print(f"[🍵-{i}] Matcha-TTS RTF: {output['rtf']:.4f}")
-        print(f"[🍵-{i}] Matcha-TTS + VOCODER RTF: {rtf_w:.4f}")
+        print(f"[🍵-{i}] Korean-Matcha-TTS RTF: {output['rtf']:.4f}")
+        print(f"[🍵-{i}] Korean-Matcha-TTS + VOCODER RTF: {rtf_w:.4f}")
         total_rtf.append(output["rtf"])
         total_rtf_w.append(rtf_w)
 
@@ -400,9 +435,9 @@ def unbatched_synthesis(args, device, model, vocoder, denoiser, texts, spk):
         print(f"[+] Waveform saved: {location}")
 
     print("".join(["="] * 100))
-    print(f"[🍵] Average Matcha-TTS RTF: {np.mean(total_rtf):.4f} ± {np.std(total_rtf)}")
-    print(f"[🍵] Average Matcha-TTS + VOCODER RTF: {np.mean(total_rtf_w):.4f} ± {np.std(total_rtf_w)}")
-    print("[🍵] Enjoy the freshly whisked 🍵 Matcha-TTS!")
+    print(f"[🍵] Average Korean-Matcha-TTS RTF: {np.mean(total_rtf):.4f} ± {np.std(total_rtf)}")
+    print(f"[🍵] Average Korean-Matcha-TTS + VOCODER RTF: {np.mean(total_rtf_w):.4f} ± {np.std(total_rtf_w)}")
+    print("[🍵] Enjoy the freshly whisked 🍵 Korean-Matcha-TTS!")
 
 
 def print_config(args):

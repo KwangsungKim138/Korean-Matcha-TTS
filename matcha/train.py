@@ -5,6 +5,8 @@ import lightning as L
 import rootutils
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
+from lightning.fabric.utilities.exceptions import MisconfigurationException
+
 from omegaconf import DictConfig
 
 from matcha import utils
@@ -74,26 +76,47 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
 
+
     if cfg.get("train"):
         log.info("Starting training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
+        # ---- 테스트 단계는 모듈/데이터모듈이 준비된 경우에만 수행 ----
+        has_test_step = getattr(model, "test_step", None) is not None
+        has_test_loader = hasattr(datamodule, "test_dataloader") and callable(getattr(datamodule, "test_dataloader"))
+        ckpt_path = cfg.get("ckpt_path")  # ✅ 미리 정의
+
+        if has_test_step and has_test_loader:
+            try:
+                log.info("Starting testing!")
+                trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+            except MisconfigurationException as e:
+                log.warning(f"Skip testing due to misconfiguration: {e}")
+        else:
+            log.info("Skip testing: no test_step or test_dataloader")
+
     train_metrics = trainer.callback_metrics
 
+    # ---- 옵션 테스트 러너도 동일하게 가드 적용 ----
     if cfg.get("test"):
-        log.info("Starting testing!")
-        ckpt_path = trainer.checkpoint_callback.best_model_path
-        if ckpt_path == "":
-            log.warning("Best ckpt not found! Using current weights for testing...")
-            ckpt_path = None
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
-        log.info(f"Best ckpt path: {ckpt_path}")
+        has_test_step = getattr(model, "test_step", None) is not None
+        has_test_loader = hasattr(datamodule, "test_dataloader") and callable(getattr(datamodule, "test_dataloader"))
+        ckpt_path = cfg.get("ckpt_path")
+
+        if has_test_step and has_test_loader:
+            log.info("Starting testing!")
+            ckpt_path = trainer.checkpoint_callback.best_model_path
+            if ckpt_path == "":
+                log.warning("Best ckpt not found! Using current weights for testing...")
+                ckpt_path = None
+            trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+            log.info(f"Best ckpt path: {ckpt_path}")
+        else:
+            log.info("Skip optional testing: no test_step or test_dataloader")
 
     test_metrics = trainer.callback_metrics
 
-    # merge train and test metrics
     metric_dict = {**train_metrics, **test_metrics}
-
     return metric_dict, object_dict
 
 

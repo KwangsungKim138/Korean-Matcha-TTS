@@ -9,7 +9,8 @@ from typing import Any, Callable, Dict, Tuple
 import gdown
 
 import matplotlib
-matplotlib.use('Agg') # for no GUI env
+
+matplotlib.use("Agg")  # for no GUI env
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -22,6 +23,7 @@ from omegaconf import DictConfig
 from matcha.utils import pylogger, rich_utils
 
 log = pylogger.get_pylogger(__name__)
+
 
 def extras(cfg: DictConfig) -> None:
     """Applies optional utilities before the task is started.
@@ -145,9 +147,9 @@ def save_figure_to_numpy(fig):
     # data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     canvas = FigureCanvasAgg(fig)
     canvas.draw()
-    
+
     w, h = canvas.get_width_height()
-    
+
     buf = np.frombuffer(canvas.buffer_rgba(), dtype=np.uint8)
     data = buf.reshape(h, w, 4)[..., :3]
     plt.close(fig)
