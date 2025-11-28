@@ -249,7 +249,7 @@ class TextMelDataset(torch.utils.data.Dataset):
             final_text = s
             cleaners = ["korean_basic_cleaners"]
 
-        elif self.text_route == "pronunciation":
+        elif self.text_route == "syllable":
             final_text = s
             cleaners = ["korean_basic_cleaners"]
 

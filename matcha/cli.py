@@ -59,7 +59,7 @@ _WS = re.compile(r"\s+")
 
 _G2P = G2p()
 
-def to_korean_pronunciation(text: str) -> str:
+def to_korean_syllable(text: str) -> str:
     s = _G2P(text)  # 전역 G2p 인스턴스 사용
     s = _HANGUL_AND_PUNC.sub(" ", s)
     return _WS.sub(" ", s).strip()
@@ -73,8 +73,8 @@ def process_text(i: int, text: str, device: torch.device, route: str):
         clean_text = text0
         cleaners = ["korean_basic_cleaners"]
 
-    elif route == "pronunciation":
-        clean_text = to_korean_pronunciation(text0)  # g2pk2 → 완성형 발음
+    elif route == "syllable":
+        clean_text = to_korean_syllable(text0)  # g2pk2 → 완성형 발음
         cleaners = ["korean_basic_cleaners"]
 
     elif route == "phoneme":
@@ -306,8 +306,8 @@ def cli():
         "--route",
         type=str,
         default="original",
-        choices=["original", "pronunciation", "phoneme"],
-        help="Text route: original (original text), pronunciation (Korean pronunciation), phoneme (Korean phoneme).",
+        choices=["original", "syllable", "phoneme"],
+        help="Text route: original (original text), syllable (Korean syllable), phoneme (Korean phoneme).",
     )
 
     args = parser.parse_args()

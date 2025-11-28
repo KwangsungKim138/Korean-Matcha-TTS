@@ -93,7 +93,7 @@ def _lookup_text(wav: Path, id2text: Dict[str, str]) -> str:
 # --------------------------
 # text routes
 # --------------------------
-def _to_pronunciation_g2pk2(s: str, g2p) -> str:
+def _to_syllable_g2pk2(s: str, g2p) -> str:
     s = g2p(s)
     s = _ALLOWED_HANGUL_LINE.sub(" ", s)
     return _norm_ws(s)
@@ -105,10 +105,10 @@ def _convert_text(route: str, original_text: str, g2p) -> str:
     if route == "original":
         return base
 
-    elif route == "pronunciation":
+    elif route == "syllable":
         if g2p is None:
-            raise RuntimeError("g2pk2 is required for pronunciation route.")
-        return _to_pronunciation_g2pk2(base, g2p)
+            raise RuntimeError("g2pk2 is required for syllable route.")
+        return _to_syllable_g2pk2(base, g2p)
 
     elif route == "phoneme":
         # 🚨 hangul_to_phoneme() must return a space-separated unit string:
@@ -144,9 +144,9 @@ def _build_items(route: str, id2text: Dict[str, str]) -> List[str]:
         for rel, txt in zip(rel_paths, raw_texts):
             items.append(f"{rel}|{txt}")
 
-    elif route == "pronunciation":
+    elif route == "syllable":
         if G2p is None:
-            raise RuntimeError("g2pk2 is required for pronunciation route.")
+            raise RuntimeError("g2pk2 is required for syllable route.")
         g2p = G2p()
 
         try:
@@ -155,7 +155,7 @@ def _build_items(route: str, id2text: Dict[str, str]) -> List[str]:
         except Exception:
             iterator = raw_texts
 
-        pron_texts = [_to_pronunciation_g2pk2(s, g2p) for s in iterator]
+        pron_texts = [_to_syllable_g2pk2(s, g2p) for s in iterator]
         for rel, txt in zip(rel_paths, pron_texts):
             items.append(f"{rel}|{txt}")
 
@@ -209,7 +209,7 @@ def main():
 
     ap.add_argument(
         "--route",
-        choices=["original", "pronunciation", "phoneme"],
+        choices=["original", "syllable", "phoneme"],
         default="original",
     )
     ap.add_argument("--val_ratio", type=float, default=0.10)

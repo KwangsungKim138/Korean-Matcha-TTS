@@ -5,15 +5,15 @@
 
 
 defaults:
-  - override /data: kss_pronunciation.yaml
-  - override /model: matcha_kor_pronunciation.yaml
+  - override /data: kss_syllable.yaml
+  - override /model: matcha_kor_syllable.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: [kss, pronunciation]
+tags: [kss, syllable]
 
-run_name: kss_pronunciation
+run_name: kss_syllable
 
 trainer:
   max_epochs: -1        # 유지

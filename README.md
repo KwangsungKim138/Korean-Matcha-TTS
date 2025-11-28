@@ -74,8 +74,9 @@ data/kss/
 Matcha-TTS는 **Tacotron 2 스타일**(`path|text`) 파일리스트를 사용합니다.
 
 ```bash
-python scripts/make_kss_filelists.py
-# → data/filelists/kss_train.txt, kss_val.txt
+python scripts/make_kss_filelists.py --route phoneme
+# → --route < original | syllable | phoneme >
+# → data/filelists/kss_phoneme_train.txt, kss_phoneme_val.txt
 ```
 
 `configs/data/kss.yaml`에 기재된 경로를 확인/수정합니다.
@@ -116,7 +117,9 @@ make train-kss
 또는
 
 ```bash
-python matcha/train.py experiment=kss
+python matcha/train.py experiment=kss_phoneme
+# python matcha/train.py experiment=kss_original
+# python matcha/train.py experiment=kss_syllable
 ```
 
 - 50 epochs 학습 후 종료, 5 epoch마다 체크포인트 저장
@@ -149,7 +152,7 @@ python matcha/train.py experiment=kss \
 Pre-trained **HiFi-GAN**에 의해 멜→오디오 변환이 수행됩니다.
 
 ```bash
-matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --checkpoint_path "<PATH_TO_CHECKPOINT>"   --vocoder hifigan_T2_v1   --steps 32   --out wavs/output
+matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --checkpoint_path "<PATH_TO_CHECKPOINT>"   --vocoder hifigan_T2_v1   --route <original | syllable | phoneme>   --steps 32   --out wavs/output
 ```
 
 `steps`와 `temperature`는 trade-off 관계
@@ -157,33 +160,12 @@ matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --che
 - `--temperature`: 샘플링 temperature
 
 - download checkpoints
-  - [1810 steps trained](https://drive.google.com/file/d/1eNhmS-AczUZCM9gc51DtaPQTWNy8QScm/view?usp=drive_link)
-  - [3620 steps trained](https://drive.google.com/file/d/1sdjaAcckWl-0S6jcmGoFTKcZE9H-ye84/view?usp=drive_link)
-  - [5430 steps trained](https://drive.google.com/file/d/1jpUqQAQTF9WXsJLYE-sgWs_peTgNz3rw/view?usp=drive_link)
-  - [7240 steps trained](https://drive.google.com/file/d/11RGTlN_ZfWV1WnqlCz4TCBzkuT_lPGqc/view?usp=drive_link)
-  - [9050 steps trained](https://drive.google.com/file/d/13sOrfpCLbCANbPnRL9spbgBrq9G8PU3S/view?usp=drive_link)
-  - [10860 steps trained](https://drive.google.com/file/d/1onS0FACqc5x2VH3RDQUxsCYKOtwr_GMg/view?usp=drive_link)
-  - [12670 steps trained](https://drive.google.com/file/d/1eYxfQHta6BNLyfdbxIIRbVfnLQIfFCia/view?usp=drive_link)
-  - [14480 steps trained](https://drive.google.com/file/d/1Y5Rqidg227-1VGhXX9Y4fhoZsdE7oIPB/view?usp=drive_link)
-  - [16290 steps trained](https://drive.google.com/file/d/1Lx7TfZoz9xD1abz7G7XJEcioagQYeA_n/view?usp=sharing)
-  - [18100 steps trained](https://drive.google.com/file/d/1MLuDK7gfStKsJB7YhIS-i0uUE1ZI3YkI/view?usp=sharing)
+  - [문자 단위 50000 steps, '--route original'](https://drive.google.com/file/d/1HEOsPkewc7EPF6SPXUOWOji7CFW2qcFu/view?usp=sharing)
+  - [음절 단위 50000 steps, '--route syllable'](https://drive.google.com/file/d/1_PqX4f9jCob6O7HdSRi7LNo5nL6RivJB/view?usp=sharing)
+  - [음소 단위 50000 steps, '--route phoneme'](https://drive.google.com/file/d/1V_ynmXWU6WgJUS_jK00FOLPYrpXTciwL/view?usp=sharing)
 ---
 
-## 4️⃣ 한국어 Matcha-TTS 개발 단계
-
-### 1단계 — 한글(문자 단위) 기반 학습 (2025. 11. 1. ~)
-- 한글/숫자/기본 문장부호만 남겨 텍스트 파일리스트에 기록  
-- **G2P 없이도** 기본적인 음질 확보 가능  
-- 연음·유음·경음화 등 발음규칙은 반영되지 않음
-- 현재 `kss-without-phonemizer` 브랜치에서 관련 코드 개선 작업 중
-
-### 2단계 — G2P 도입 (2025. 11. 2. ~)
-- [g2pk2](https://pypi.org/project/g2pk2) 또는 [g2pkk](https://github.com/g2pkteam/g2pkk) 사용  
-- 발음 규칙 반영(phonetise) 후 `text` 필드에 발음 표기 기록
-
----
-
-## 5️⃣ ONNX Export
+## 4️⃣ ONNX Export
 
 ```bash
 pip install onnx onnxruntime-gpu
