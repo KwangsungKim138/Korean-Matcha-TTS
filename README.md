@@ -107,13 +107,6 @@ python scripts/make_kss_filelists.py --route phoneme
 # → data/filelists/kss_phoneme_train.txt, kss_phoneme_val.txt
 ```
 
-`configs/data/kss.yaml`에 기재된 경로를 확인/수정합니다.
-
-```yaml
-train_filelist_path: data/filelists/kss_train.txt
-valid_filelist_path: data/filelists/kss_val.txt
-```
-
 ### E. Install espeak-ng
 
 ```bash
@@ -123,11 +116,12 @@ sudo apt-get update && sudo apt-get install -y espeak-ng
 ### F. Compute Mel Statistics
 
 ```bash
-matcha-data-stats -i kss.yaml
+matcha-data-stats -i kss_phoneme.yaml
+# → kss_< original | syllable | phoneme >.yaml
 # {'mel_mean': -6.562135219573975, 'mel_std': 2.7914016246795654}
 ```
 
-결괏값을 `configs/data/kss.yaml`의 `data_statistics` 항목에 입력합니다.
+결괏값을 `configs/data/kss_phoneme.yaml`의 `data_statistics` 항목에 입력합니다.
 
 ```yaml
 data_statistics:
@@ -141,6 +135,9 @@ data_statistics:
 
 ```bash
 make train-kss
+# make train-kss_original
+# make train-kss_syllable
+# make train-kss_phoneme
 ```
 또는
 
@@ -152,27 +149,17 @@ python matcha/train.py experiment=kss_phoneme
 
 - 50 epochs 학습 후 종료, 5 epoch마다 체크포인트 저장
 ```bash
-python matcha/train.py experiment=kss \
+python matcha/train.py experiment=kss_phoneme \
   trainer.max_epochs=50 \
   callbacks.model_checkpoint.every_n_epochs=5
 ```
 
 - 50 epochs 학습 후 종료, 1000 step마다 체크포인트 저장
 ```bash
-python matcha/train.py experiment=kss \
+python matcha/train.py experiment=kss_phoneme \
   trainer.max_epochs=50 \
   callbacks.model_checkpoint.every_n_train_steps=1000
 ```
-
-- 최소 메모리 모드 (미지원)
-  ```bash
-  python matcha/train.py experiment=kss_min_memory
-  ```
-- 다중 GPU 학습  
-  ```bash
-  python matcha/train.py experiment=kss trainer.devices=[0,1]
-  ```
-
 ---
 
 ## 3️⃣ 추론
@@ -201,16 +188,6 @@ matcha-tts   --text "한국어로 말하는 법을 배우고 있어요."   --che
 | 확장 음소 단위 학습 (Phoneme+Marker) |      0.0000      |      0.0455      |
 ---
 
-## 4️⃣ ONNX Export (미지원)
-
-```bash
-pip install onnx onnxruntime-gpu
-python3 -m matcha.onnx.export matcha.ckpt model.onnx --n-timesteps 5
-python3 -m matcha.onnx.infer model.onnx --text "안녕하세요" --gpu
-```
-
----
-
 ## 📄 Citation
 
 ```text
@@ -226,5 +203,3 @@ python3 -m matcha.onnx.infer model.onnx --text "안녕하세요" --gpu
 ---
 
 - [Matcha-TTS (Original Repo)](https://github.com/shivammehta25/Matcha-TTS)  
-
-

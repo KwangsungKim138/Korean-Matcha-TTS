@@ -39,7 +39,16 @@ train-ljspeech-min: ## Train the model with minimum memory
 	python matcha/train.py experiment=ljspeech_min_memory
 
 train-kss: ## Train the model
-	python matcha/train.py experiment=kss
+	python matcha/train.py experiment=kss_phoneme
+
+train-kss_original: ## Train the model
+	python matcha/train.py experiment=kss_original
+
+train-kss_syllable: ## Train the model
+	python matcha/train.py experiment=kss_syllable
+
+train-kss_phoneme: ## Train the model
+	python matcha/train.py experiment=kss_phoneme
 
 start_app: ## Start the app
 	python matcha/app.py
